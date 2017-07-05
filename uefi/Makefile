@@ -1,7 +1,7 @@
 ARCH		= x86_64
 
-HEADERS		=
-OBJS		= uefi/boot.o
+HEADERS		= info.h
+OBJS		= boot.o
 
 EFIINC			= /usr/local/include/efi
 EFIINCS			= -I$(EFIINC) -I$(EFIINC)/$(ARCH) -Ii$(EFIINC)/protocol
@@ -28,7 +28,7 @@ clean:
 	rm -f *.iso
 	rm -f *.img
 	rm -f *.efi
-	rm -f uefi/*.o
+	rm -f *.o
 	rm -f *.so
 
 image.iso: image.img

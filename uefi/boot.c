@@ -3,8 +3,22 @@
 #include <efi.h>
 #include <efilib.h>
 #include <efiprot.h>
+#include "info.h"
 
-EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) 
+mem_map_t mem_map;
+
+/*
+ * EFI stub
+ *
+ * Gather information into efi vars then load our kernel into memory and switch execution to it (after exiting boot services)
+ *
+ * - Memory Map
+ * - Video modes
+ * - Modules
+ * - 
+ *
+ */
+EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) 
 {
     EFI_STATUS status;
     EFI_INPUT_KEY key;
@@ -12,16 +26,16 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     // init efi lib for use
     InitializeLib(ImageHandle, SystemTable);
 
-    ST = SystemTable;
-
     Print(L"test string\n");
 
-    status = ST->ConIn->Reset(ST->ConIn, FALSE);
-    if (EFI_ERROR(status)) {
-        return status;   
-    }
+    // populate memory map
+    mem_map.memory_map = LibMemoryMap(&mem_map.num_entries, &mem_map.map_key, &mem_map.desc_size, &mem_map.desc_version);
+
+    status = uefi_call_wrapper(BS->ExitBootServices, 2, ImageHandle, mem_map.map_key);
+    //TODO error handling
     
-    while ((status = ST->ConIn->ReadKeyStroke(ST->ConIn, &key)) == EFI_NOT_READY);
+    status = uefi_call_wrapper(RT->SetVirtualAddressMap, 4, mem_map.num_entries, mem_map.desc_size, mem_map.desc_version, mem_map.memory_map);
+    //TODO error handling
 
     return status;
 }
