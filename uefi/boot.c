@@ -17,7 +17,6 @@ mem_map_t mem_map;
  * - Memory Map
  * - Video modes
  * - Modules
- * - 
  *
  */
 EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) 
@@ -41,25 +40,20 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     CHAR16 str[] = L"string";
     UINTN ts = sizeof(str);
 
-    Print(L"Before set\n");
-
-    efivar_set(L"test", &ts, str, FALSE);
-
-    Print(L"After set\n");
+    status = efivar_set(L"test", &ts, str, FALSE);
+    print_efi_status(status);
 
     ST->ConIn->Reset(ST->ConIn, FALSE);
     while ((status = ST->ConIn->ReadKeyStroke(ST->ConIn, &key)) == EFI_NOT_READY) ;
 
     CHAR16 *strg = NULL;
     UINTN tsg = 0; 
-    
-    Print(L"Before get\n");
 
-    efivar_get(L"test", &tsg, strg);
+    status = efivar_get(L"test", &tsg, &strg);
+    print_efi_status(status);
 
     Print(L"After get: results on next line\n");
-    Print(strg);
-
+    Print(L"%s\n", strg);
 
     ST->ConIn->Reset(ST->ConIn, FALSE);
     while ((status = ST->ConIn->ReadKeyStroke(ST->ConIn, &key)) == EFI_NOT_READY) ;
