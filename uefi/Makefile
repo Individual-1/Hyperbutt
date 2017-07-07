@@ -1,7 +1,7 @@
 ARCH		= x86_64
 
-HEADERS		= info.h
-OBJS		= boot.o
+HEADERS		= info.h guid.h info.h util.h
+OBJS		= boot.o util.o
 
 EFIINC			= /usr/local/include/efi
 EFIINCS			= -I$(EFIINC) -I$(EFIINC)/$(ARCH) -Ii$(EFIINC)/protocol
@@ -32,6 +32,7 @@ clean:
 	rm -f *.so
 
 image.iso: image.img
+	rm -rf iso
 	mkdir iso
 	cp $< iso
 	xorriso -as mkisofs -R -f -e $< -no-emul-boot -o $@ iso
