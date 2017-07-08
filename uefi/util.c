@@ -128,7 +128,7 @@ EFI_STATUS efivar_set(CHAR16 *name, UINTN *size, VOID *data, BOOLEAN persist)
 
 // Pass in an empty ptr for size and data, they will be populated by the function
 // *data must be freed by FreePool, responsibility of caller
-EFI_STATUS efivar_get(CHAR16 *name, UINTN *size, VOID **data)
+EFI_STATUS efivar_get(CHAR16 *name, OUT UINTN *size, OUT VOID **data)
 {
     EFI_STATUS status;
     UINT8 dump;

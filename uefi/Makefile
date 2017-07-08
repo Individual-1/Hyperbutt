@@ -1,7 +1,7 @@
 ARCH		= x86_64
 
-HEADERS		= info.h guid.h info.h util.h
-OBJS		= boot.o util.o
+HEADERS		= info.h guid.h  util.h graphics.h
+OBJS		= boot.o util.o graphics.o
 
 EFIINC			= /usr/local/include/efi
 EFIINCS			= -I$(EFIINC) -I$(EFIINC)/$(ARCH) -Ii$(EFIINC)/protocol

@@ -4,10 +4,12 @@
 #include <efilib.h>
 #include <efiprot.h>
 
+#include "graphics.h"
 #include "info.h"
 #include "util.h"
 
 mem_map_t mem_map;
+gfx_info_t gfx_info;
 
 /*
  * EFI stub
@@ -34,15 +36,29 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     // init efi lib for use
     InitializeLib(ImageHandle, SystemTable);
 
-    Print(L"test string\n");
-
-    // populate memory map
-    mem_map.memory_map = LibMemoryMap(&mem_map.num_entries, &mem_map.map_key, &mem_map.desc_size, &mem_map.desc_version);
+    Print(L"Press to populate memory map\n");
 
     // test code please ignore
     ST->ConIn->Reset(ST->ConIn, FALSE);
     while ((status = ST->ConIn->ReadKeyStroke(ST->ConIn, &key)) == EFI_NOT_READY) ;
 
+    // populate memory map
+    mem_map.memory_map = LibMemoryMap(&mem_map.num_entries, &mem_map.map_key, &mem_map.desc_size, &mem_map.desc_version);
+
+    Print(L"Press to init graphics\n");
+
+    // test code please ignore
+    ST->ConIn->Reset(ST->ConIn, FALSE);
+    while ((status = ST->ConIn->ReadKeyStroke(ST->ConIn, &key)) == EFI_NOT_READY) ;
+
+    // init graphics
+    status = init_graphics(&gfx_info);
+
+    Print(L"After graphics init\n");
+
+    // test code please ignore
+    ST->ConIn->Reset(ST->ConIn, FALSE);
+    while ((status = ST->ConIn->ReadKeyStroke(ST->ConIn, &key)) == EFI_NOT_READY) ;
     
     CHAR16 str[] = L"string";
     UINTN ts = sizeof(str);
