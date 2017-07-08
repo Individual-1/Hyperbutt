@@ -14,10 +14,17 @@ mem_map_t mem_map;
  *
  * Gather information into efi vars then load our kernel into memory and switch execution to it (after exiting boot services)
  *
- * - Memory Map
- * - Video modes
- * - Modules
+ * * Memory Map
+ * * Video modes
+ * * Modules
  *
+ * TODO before we exit bootservices:
+ * * setup graphics (do mode detection in boot services)
+ * * Get handles to pci devices
+ * * Populate the memory map
+ * * Load in kernel and put it in memory somewhere
+ * * Set up GDT and disable interrupts
+ * * exit boot services then jump to kernel
  */
 EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) 
 {
@@ -41,22 +48,6 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     UINTN ts = sizeof(str);
 
     status = efivar_set(L"test", &ts, str, FALSE);
-    print_efi_status(status);
-
-    ST->ConIn->Reset(ST->ConIn, FALSE);
-    while ((status = ST->ConIn->ReadKeyStroke(ST->ConIn, &key)) == EFI_NOT_READY) ;
-
-    CHAR16 *strg = NULL;
-    UINTN tsg = 0; 
-
-    status = efivar_get(L"test", &tsg, &strg);
-    print_efi_status(status);
-
-    Print(L"After get: results on next line\n");
-    Print(L"%s\n", strg);
-
-    ST->ConIn->Reset(ST->ConIn, FALSE);
-    while ((status = ST->ConIn->ReadKeyStroke(ST->ConIn, &key)) == EFI_NOT_READY) ;
 
     status = uefi_call_wrapper(BS->ExitBootServices, 2, ImageHandle, mem_map.map_key);
     //TODO error handling
