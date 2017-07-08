@@ -17,10 +17,13 @@ typedef struct mem_map_s {
 } mem_map_t;
 
 typedef struct gfx_info_s {
-    EFI_GRAPHICS_OUTPUT_PROTOCOL            *protocol;
-    EFI_GRAPHICS_OUTPUT_MODE_INFORMATION    info;
-    EFI_PHYSICAL_ADDRESS                    buffer_base;
-    UINTN                                   buffer_size;
+    UINT16                                  fb_width;
+    UINT16                                  fb_height;
+    EFI_GRAPHICS_PIXEL_FORMAT               fb_pixfmt;
+    EFI_PIXEL_BITMASK                       fb_pixmask; // Currently unused since we don't accept pixelpixelbitmask format
+    UINT32                                  fb_pixline;
+    EFI_PHYSICAL_ADDRESS                    fb_base;
+    UINTN                                   fb_size;
 } gfx_info_t;
 
 static const CHAR16 *mem_types[] = {

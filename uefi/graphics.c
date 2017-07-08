@@ -7,47 +7,71 @@
 #include "graphics.h"
 #include "info.h"
 
+// TODO: collapse status->efi_error blocks maybe
 EFI_STATUS init_graphics(OUT gfx_info_t *gfx_info)
 {
     EFI_STATUS status;
     EFI_GRAPHICS_OUTPUT_PROTOCOL *gfx;
-    EFI_GUID gfx_guid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
     UINT32 mode;
+    EFI_HANDLE *handles = NULL;
+    UINTN nr_handles;
+    UINTN iter;
 
     Print(L"Entering init graphics, gfx_info: %X\n", gfx_info);
 
-    status = uefi_call_wrapper(BS->LocateProtocol, 3, &gfx_guid, NULL, &gfx);
-    if (EFI_ERROR(status) || gfx == NULL) {
-        Print(L"Failed to locate gfx handle\n");
-        return status;
-    }
-
-    mode = gfx->Mode->Mode;
-
-    Print(L"Base mode: %d\n", mode);
-
-    status = find_mode(gfx, &mode);
+    status = LibLocateHandle(ByProtocol, &gEfiGraphicsOutputProtocolGuid, NULL, &nr_handles, &handles);
     if (EFI_ERROR(status)) {
-        Print(L"Failed to locate best mode\n");
+        Print(L"Failed to locate gfx handles\n");
         return status;
     }
 
-    Print(L"Discovered mode: %d\n", mode);
+    // iterate over list of handles and pull down information for them, how do we decide which one to use?
+    // right now we just find the first handle that has our desired h and v res and use that
+    for (iter = 0; iter < nr_handles; iter++) {
+        EFI_HANDLE *handle = handles[iter];
+        EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *info = NULL;
+        UINTN size;
 
-    status = uefi_call_wrapper(gfx->SetMode, 2, gfx, mode);
-    if (EFI_ERROR(status)) {
-        Print(L"Failed to set graphics mode\n");
-        return status;
+        status = uefi_call_wrapper(BS->HandleProtocol, 3, handle, &gEfiGraphicsOutputProtocolGuid, (void **) &gfx);
+        if (EFI_ERROR(status)) {
+                continue;
+        }
+
+        status = find_mode(gfx, &mode);
+        if (EFI_ERROR(status)) {
+            Print(L"No mode found for handle %d\n", iter);
+            continue;
+        }
+
+        status = uefi_call_wrapper(gfx->SetMode, 2, gfx, mode);
+        if (EFI_ERROR(status)) {
+            Print(L"Failed to set mode for handle %d mode %d\n", iter, mode);
+            break;
+        }
+
+        status = uefi_call_wrapper(gfx->QueryMode, 4, gfx, mode, &size, &info);
+        if (EFI_ERROR(status)) {
+            Print(L"Failed to read set mode for handle %d mode %d\n", iter, mode);
+            break;
+        } else {
+            // Copy out all data we care about to our gfx_info struct
+            gfx_info->fb_width = info->HorizontalResolution;
+            gfx_info->fb_height = info->VerticalResolution;
+            gfx_info->fb_base = gfx->Mode->FrameBufferBase;
+            gfx_info->fb_size = gfx->Mode->FrameBufferSize;
+            gfx_info->fb_pixfmt = info->PixelFormat;
+            gfx_info->fb_pixmask = info->PixelInformation;
+            gfx_info->fb_pixline = info->PixelsPerScanLine;
+            break;
+        }
+
     }
 
-    Print(L"Mode set\n");
+    if (handles) {
+        FreePool(handles);
+    }
 
-    gfx_info->protocol = gfx;
-    gfx_info->info = *(gfx->Mode->Info);
-    gfx_info->buffer_base = gfx->Mode->FrameBufferBase;
-    gfx_info->buffer_size = gfx->Mode->FrameBufferSize;
-
-    return EFI_SUCCESS;
+    return status;
 }
 
 /*
@@ -63,33 +87,29 @@ EFI_STATUS find_mode(EFI_GRAPHICS_OUTPUT_PROTOCOL *gfx, OUT UINT32 *mode)
 
     Print(L"Entering find mode, gfx: %X\n", gfx);
 
+    // Get the base mode for comparison against later
     status = uefi_call_wrapper(gfx->QueryMode, 4, gfx, gfx->Mode->Mode, &size, &info);
-    if (EFI_ERROR(status) || !info) {
+    if (EFI_ERROR(status)) {
         Print(L"Query for mode %d failed\n", gfx->Mode->Mode);
         return status;
     }
 
-    Print(L"Base query mode success, max: %d\n", gfx->Mode->MaxMode);
-
-    Print(L"info addresses: %X %X\n", &base_info, info);
+    // Set base values
 
     base_info = AllocatePool(sizeof(EFI_GRAPHICS_OUTPUT_MODE_INFORMATION));
+    if (!base_info) {
+        return EFI_OUT_OF_RESOURCES;
+    }
 
-    memcpy(base_info, info, sizeof(EFI_GRAPHICS_OUTPUT_MODE_INFORMATION));
-
-    Print(L"info values: %X %X\n", base_info, *info);
-
-    Print(L"Entering loop\n");
+    CopyMem(base_info, info, sizeof(EFI_GRAPHICS_OUTPUT_MODE_INFORMATION));
+    *mode = gfx->Mode->Mode;
 
     for (UINT32 iter = 0; iter < gfx->Mode->MaxMode; iter += 1) {
-
-        Print(L"Loop iteration %d\n", iter);
 
         status = uefi_call_wrapper(gfx->QueryMode, 4, gfx, iter, &size, &info);
         if (EFI_ERROR(status)) {
             Print(L"Query for mode %d failed\n", iter);
-            FreePool(base_info);
-            return status;
+            goto exit;
         }
 
         // We want one of these pixel formats probably?
@@ -98,16 +118,27 @@ EFI_STATUS find_mode(EFI_GRAPHICS_OUTPUT_PROTOCOL *gfx, OUT UINT32 *mode)
             continue;
         }
 
-        if (info->VerticalResolution >= base_info->VerticalResolution &&
-             info->HorizontalResolution >= base_info->HorizontalResolution) {
-            memcpy(base_info, info, sizeof(EFI_GRAPHICS_OUTPUT_MODE_INFORMATION));
+        // Skip if this mode is greater than what we want
+        if (info->VerticalResolution > DESIRED_V_RES &&
+             info->HorizontalResolution > DESIRED_H_RES) {
+            continue;
+        }
+
+        // If this is an exact match then bail out, otherwise if this mode is taller than the old one then use it instead
+        if (info->VerticalResolution == DESIRED_V_RES &&
+             info->HorizontalResolution == DESIRED_H_RES) {
             *mode = iter;
+            break;
+        } else if (info->VerticalResolution > base_info->VerticalResolution) {
+            CopyMem(base_info, info, sizeof(EFI_GRAPHICS_OUTPUT_MODE_INFORMATION));
         }
     }
 
+exit:
     Print(L"Exiting find mode\n");
-    
-    FreePool(base_info);
+    if (base_info) {
+        FreePool(base_info);
+    }
 
-    return EFI_SUCCESS;
+    return status;
 }
