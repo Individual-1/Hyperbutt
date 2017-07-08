@@ -15,19 +15,18 @@ EFI_STATUS init_graphics(OUT gfx_info_t *gfx_info)
     UINT32 mode;
     EFI_HANDLE *handles = NULL;
     UINTN nr_handles;
-    UINTN iter;
 
     Print(L"Entering init graphics, gfx_info: %X\n", gfx_info);
 
     status = LibLocateHandle(ByProtocol, &gEfiGraphicsOutputProtocolGuid, NULL, &nr_handles, &handles);
     if (EFI_ERROR(status)) {
         Print(L"Failed to locate gfx handles\n");
-        return status;
+        goto exit;
     }
 
     // iterate over list of handles and pull down information for them, how do we decide which one to use?
     // right now we just find the first handle that has our desired h and v res and use that
-    for (iter = 0; iter < nr_handles; iter++) {
+    for (UINTN iter = 0; iter < nr_handles; iter++) {
         EFI_HANDLE *handle = handles[iter];
         EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *info = NULL;
         UINTN size;
@@ -55,8 +54,8 @@ EFI_STATUS init_graphics(OUT gfx_info_t *gfx_info)
             break;
         } else {
             // Copy out all data we care about to our gfx_info struct
-            gfx_info->fb_width = info->HorizontalResolution;
-            gfx_info->fb_height = info->VerticalResolution;
+            gfx_info->fb_hres = info->HorizontalResolution;
+            gfx_info->fb_vres = info->VerticalResolution;
             gfx_info->fb_base = gfx->Mode->FrameBufferBase;
             gfx_info->fb_size = gfx->Mode->FrameBufferSize;
             gfx_info->fb_pixfmt = info->PixelFormat;
@@ -67,6 +66,7 @@ EFI_STATUS init_graphics(OUT gfx_info_t *gfx_info)
 
     }
 
+exit:
     if (handles) {
         FreePool(handles);
     }
@@ -104,7 +104,7 @@ EFI_STATUS find_mode(EFI_GRAPHICS_OUTPUT_PROTOCOL *gfx, OUT UINT32 *mode)
     CopyMem(base_info, info, sizeof(EFI_GRAPHICS_OUTPUT_MODE_INFORMATION));
     *mode = gfx->Mode->Mode;
 
-    for (UINT32 iter = 0; iter < gfx->Mode->MaxMode; iter += 1) {
+    for (UINT32 iter = 0; iter < gfx->Mode->MaxMode; iter++) {
 
         status = uefi_call_wrapper(gfx->QueryMode, 4, gfx, iter, &size, &info);
         if (EFI_ERROR(status)) {
@@ -141,4 +141,30 @@ exit:
     }
 
     return status;
+}
+
+// test graphics, taken from some osdev post
+void draw_triangle(const gfx_info_t *gfx_info) {
+    UINT32 *loc = (UINT32 *)gfx_info->fb_base;
+    UINTN row, col;
+    UINT32 color = 0x00ff55ff;
+    UINTN width = 100;
+
+    loc += (gfx_info->fb_hres * (gfx_info->fb_vres / 2 - 25) + (gfx_info->fb_hres / 2) - width / 2);
+
+    for (row = 0; row < width / 2; row++) {
+        for (col = 0; col < width - row * 2; col++) {
+            *loc++ = color;
+        }
+
+        loc += (gfx_info->fb_hres - col);
+        
+        for (col = 0; col < width - row * 2; col++) {
+            *loc++ = color;
+        }
+
+        loc += (gfx_info->fb_hres - col + 1);
+    }
+
+    return;
 }

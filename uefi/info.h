@@ -8,7 +8,7 @@
 #include <efilib.h>
 #include <stddef.h>
 
-typedef struct mem_map_s {
+typedef struct mem_map {
     EFI_MEMORY_DESCRIPTOR   *memory_map;
     UINT32                  desc_version;
     UINTN                   desc_size;
@@ -16,9 +16,9 @@ typedef struct mem_map_s {
     UINTN                   num_entries;
 } mem_map_t;
 
-typedef struct gfx_info_s {
-    UINT16                                  fb_width;
-    UINT16                                  fb_height;
+typedef struct gfx_info {
+    UINT16                                  fb_hres; // Horizontal Resolution
+    UINT16                                  fb_vres; // Vertical Resolution
     EFI_GRAPHICS_PIXEL_FORMAT               fb_pixfmt;
     EFI_PIXEL_BITMASK                       fb_pixmask; // Currently unused since we don't accept pixelpixelbitmask format
     UINT32                                  fb_pixline;
