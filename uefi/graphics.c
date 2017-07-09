@@ -7,7 +7,11 @@
 #include "graphics.h"
 #include "info.h"
 
-// TODO: collapse status->efi_error blocks maybe
+/* TODO: collapse status->efi_error blocks maybe
+* TODO: do i need to free the info and gfx results?? info is callee allocated 
+* but with no indication that it needs to be manually freed
+* unlike LibLocateHandle (wrapper around LocateHandle and OpenHandle?) which examples all show freeing it
+*/
 EFI_STATUS init_graphics(OUT gfx_info_t *gfx_info)
 {
     EFI_STATUS status;
@@ -21,7 +25,8 @@ EFI_STATUS init_graphics(OUT gfx_info_t *gfx_info)
     status = LibLocateHandle(ByProtocol, &gEfiGraphicsOutputProtocolGuid, NULL, &nr_handles, &handles);
     if (EFI_ERROR(status)) {
         Print(L"Failed to locate gfx handles\n");
-        goto exit;
+        if (handles) FreePool(handles);
+        return status;
     }
 
     // iterate over list of handles and pull down information for them, how do we decide which one to use?
@@ -33,7 +38,11 @@ EFI_STATUS init_graphics(OUT gfx_info_t *gfx_info)
 
         status = uefi_call_wrapper(BS->HandleProtocol, 3, handle, &gEfiGraphicsOutputProtocolGuid, (void **) &gfx);
         if (EFI_ERROR(status)) {
-                continue;
+            if (gfx) {
+                FreePool(gfx);
+                gfx = NULL;
+            }
+            continue;
         }
 
         status = find_mode(gfx, &mode);
@@ -51,6 +60,10 @@ EFI_STATUS init_graphics(OUT gfx_info_t *gfx_info)
         status = uefi_call_wrapper(gfx->QueryMode, 4, gfx, mode, &size, &info);
         if (EFI_ERROR(status)) {
             Print(L"Failed to read set mode for handle %d mode %d\n", iter, mode);
+            if (info) {
+                FreePool(info);
+                info = NULL;
+            }
             break;
         } else {
             // Copy out all data we care about to our gfx_info struct
@@ -61,12 +74,15 @@ EFI_STATUS init_graphics(OUT gfx_info_t *gfx_info)
             gfx_info->fb_pixfmt = info->PixelFormat;
             gfx_info->fb_pixmask = info->PixelInformation;
             gfx_info->fb_pixline = info->PixelsPerScanLine;
+
+            if (info) {
+                FreePool(info);
+                info = NULL;
+            }
             break;
         }
-
     }
 
-exit:
     if (handles) {
         FreePool(handles);
     }
@@ -77,6 +93,7 @@ exit:
 /*
  * Iterate through the available modes and find whichever one makes best use of the display
  *
+ * TODO: do I need to free all these info allocations? being able to use base_info and pointing it to a later orphaned info block seems to say yes
  */
 EFI_STATUS find_mode(EFI_GRAPHICS_OUTPUT_PROTOCOL *gfx, OUT UINT32 *mode)
 {
@@ -88,39 +105,38 @@ EFI_STATUS find_mode(EFI_GRAPHICS_OUTPUT_PROTOCOL *gfx, OUT UINT32 *mode)
     Print(L"Entering find mode, gfx: %X\n", gfx);
 
     // Get the base mode for comparison against later
-    status = uefi_call_wrapper(gfx->QueryMode, 4, gfx, gfx->Mode->Mode, &size, &info);
+    status = uefi_call_wrapper(gfx->QueryMode, 4, gfx, gfx->Mode->Mode, &size, &base_info);
     if (EFI_ERROR(status)) {
         Print(L"Query for mode %d failed\n", gfx->Mode->Mode);
+        if (base_info) FreePool(base_info);
+        base_info = NULL;
         return status;
     }
 
     // Set base values
-
-    base_info = AllocatePool(sizeof(EFI_GRAPHICS_OUTPUT_MODE_INFORMATION));
-    if (!base_info) {
-        return EFI_OUT_OF_RESOURCES;
-    }
-
-    CopyMem(base_info, info, sizeof(EFI_GRAPHICS_OUTPUT_MODE_INFORMATION));
     *mode = gfx->Mode->Mode;
 
     for (UINT32 iter = 0; iter < gfx->Mode->MaxMode; iter++) {
-
         status = uefi_call_wrapper(gfx->QueryMode, 4, gfx, iter, &size, &info);
         if (EFI_ERROR(status)) {
             Print(L"Query for mode %d failed\n", iter);
-            goto exit;
+            if (info) FreePool(info);
+            break;
         }
 
         // We want one of these pixel formats probably?
         if (info->PixelFormat != PixelRedGreenBlueReserved8BitPerColor &&
              info->PixelFormat != PixelBlueGreenRedReserved8BitPerColor) {
+            FreePool(info);
+            info = NULL;
             continue;
         }
 
         // Skip if this mode is greater than what we want
         if (info->VerticalResolution > DESIRED_V_RES &&
              info->HorizontalResolution > DESIRED_H_RES) {
+            FreePool(info);
+            info = NULL;
             continue;
         }
 
@@ -128,16 +144,19 @@ EFI_STATUS find_mode(EFI_GRAPHICS_OUTPUT_PROTOCOL *gfx, OUT UINT32 *mode)
         if (info->VerticalResolution == DESIRED_V_RES &&
              info->HorizontalResolution == DESIRED_H_RES) {
             *mode = iter;
+            FreePool(info);
+            info = NULL;
             break;
         } else if (info->VerticalResolution > base_info->VerticalResolution) {
-            CopyMem(base_info, info, sizeof(EFI_GRAPHICS_OUTPUT_MODE_INFORMATION));
+            FreePool(base_info);
+            base_info = info;
         }
     }
 
-exit:
     Print(L"Exiting find mode\n");
     if (base_info) {
         FreePool(base_info);
+        base_info = NULL;
     }
 
     return status;
