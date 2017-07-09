@@ -38,10 +38,6 @@ EFI_STATUS init_graphics(OUT gfx_info_t *gfx_info)
 
         status = uefi_call_wrapper(BS->HandleProtocol, 3, handle, &gEfiGraphicsOutputProtocolGuid, (void **) &gfx);
         if (EFI_ERROR(status)) {
-            if (gfx) {
-                FreePool(gfx);
-                gfx = NULL;
-            }
             continue;
         }
 

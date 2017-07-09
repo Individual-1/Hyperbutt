@@ -4,6 +4,7 @@
 #include "util.h"
 #include "guid.h"
 
+// replace this terrible thing with an x-macro at some point, or just kill it entirely
 VOID print_efi_status(EFI_STATUS status)
 {
     switch(status) {
