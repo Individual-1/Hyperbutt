@@ -1,4 +1,4 @@
-// UEFI info gathering definitions
+// UEFI info structures
 #pragma once
 
 #ifndef INFO_H
