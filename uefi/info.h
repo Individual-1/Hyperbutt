@@ -6,7 +6,6 @@
 
 #include <efi.h>
 #include <efilib.h>
-#include <stddef.h>
 
 typedef struct mem_map {
     EFI_MEMORY_DESCRIPTOR   *memory_map;

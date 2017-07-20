@@ -8,6 +8,8 @@
 #include "info.h"
 #include "util.h"
 
+#include "../kernel/boot.h"
+
 mem_map_t mem_map;
 gfx_info_t gfx_info;
 
