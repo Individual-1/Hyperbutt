@@ -79,7 +79,8 @@ EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     status = uefi_call_wrapper(RT->SetVirtualAddressMap, 4, mem_map.num_entries, mem_map.desc_size, mem_map.desc_version, mem_map.memory_map);
     //TODO error handling
 
-    draw_triangle(&gfx_info);
+    print_memory_map(&mem_map);
+    //draw_triangle(&gfx_info);
 
     return status;
 }

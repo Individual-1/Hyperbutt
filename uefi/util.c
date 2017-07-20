@@ -4,109 +4,64 @@
 #include "util.h"
 #include "guid.h"
 
-// replace this terrible thing with an x-macro at some point, or just kill it entirely
-VOID print_efi_status(EFI_STATUS status)
+const CHAR16 *mem_types[] = {
+    L"EfiReservedMemoryType",
+    L"EfiLoaderCode",
+    L"EfiLoaderData",
+    L"EfiBootServicesCode",
+    L"EfiBootServicesData",
+    L"EfiRuntimeServicesCode",
+    L"EfiRuntimeServicesData",
+    L"EfiConventionalMemory",
+    L"EfiUnusableMemory",
+    L"EfiACPIReclaimMemory",
+    L"EfiACPIMemoryNVS",
+    L"EfiMemoryMappedIO",
+    L"EfiMemoryMappedIOPortSpace",
+    L"EfiPalCode"
+};
+
+// Make a little helper function in case the firmware returns some weird type number
+static const CHAR16 * mem_type_to_str(UINT32 type)
 {
-    switch(status) {
-        case EFI_SUCCESS:
-            Print(L"EFI_SUCCESS\n");
-            break;
-        case EFI_LOAD_ERROR:
-            Print(L"EFI_LOAD_ERROR\n");
-            break;
-        case EFI_INVALID_PARAMETER:
-            Print(L"EFI_INVALID_PARAMETER\n");
-            break;
-        case EFI_UNSUPPORTED:
-            Print(L"EFI_UNSUPPORTED\n");
-            break;
-        case EFI_BAD_BUFFER_SIZE:
-            Print(L"EFI_BAD_BUFFER_SIZE\n");
-            break;
-        case EFI_BUFFER_TOO_SMALL:
-            Print(L"EFI_BUFFER_TOO_SMALL\n");
-            break;
-        case EFI_NOT_READY:
-            Print(L"EFI_NOT_READY\n");
-            break;
-        case EFI_DEVICE_ERROR:
-            Print(L"EFI_DEVICE_ERROR\n");
-            break;
-        case EFI_WRITE_PROTECTED:
-            Print(L"EFI_WRITE_PROTECTED\n");
-            break;
-        case EFI_OUT_OF_RESOURCES:
-            Print(L"EFI_OUT_OF_RESOURCES\n");
-            break;
-        case EFI_VOLUME_CORRUPTED:
-            Print(L"EFI_VOLUME_CORRUPTED\n");
-            break;
-        case EFI_VOLUME_FULL:
-            Print(L"EFI_VOLUME_FULL\n");
-            break;
-        case EFI_NO_MEDIA:
-            Print(L"EFI_NO_MEDIA\n");
-            break;
-        case EFI_MEDIA_CHANGED:
-            Print(L"EFI_MEDIA_CHANGED\n");
-            break;
-        case EFI_NOT_FOUND:
-            Print(L"EFI_NOT_FOUND\n");
-            break;
-        case EFI_ACCESS_DENIED:
-            Print(L"EFI_ACCESS_DENIED\n");
-            break;
-        case EFI_NO_RESPONSE:
-            Print(L"EFI_NO_RESPONSE\n");
-            break;
-        case EFI_NO_MAPPING:
-            Print(L"EFI_NO_MAPPING\n");
-            break;
-        case EFI_TIMEOUT:
-            Print(L"EFI_TIMEOUT\n");
-            break;
-        case EFI_NOT_STARTED:
-            Print(L"EFI_NOT_STARTED\n");
-            break;
-        case EFI_ALREADY_STARTED:
-            Print(L"EFI_ALREADY_STARTED\n");
-            break;
-        case EFI_ABORTED:
-            Print(L"EFI_ABORTED\n");
-            break;
-        case EFI_ICMP_ERROR:
-            Print(L"EFI_ICMP_ERROR\n");
-            break;
-        case EFI_TFTP_ERROR:
-            Print(L"EFI_TFTP_ERROR\n");
-            break;
-        case EFI_PROTOCOL_ERROR:
-            Print(L"EFI_PROTOCOL_ERROR\n");
-            break;
-        case EFI_INCOMPATIBLE_VERSION:
-            Print(L"EFI_INCOMPATIBLE_VERSION\n");
-            break;
-        case EFI_SECURITY_VIOLATION:
-            Print(L"EFI_SECURITY_VIOLATION\n");
-            break;
-        case EFI_CRC_ERROR:
-            Print(L"EFI_CRC_ERROR\n");
-            break;
-        case EFI_END_OF_MEDIA:
-            Print(L"EFI_END_OF_MEDIA\n");
-            break;
-        case EFI_END_OF_FILE:
-            Print(L"EFI_END_OF_FILE\n");
-            break;
-        case EFI_WARN_DELETE_FAILURE:
-            Print(L"EFI_WARN_DELETE_FAILURE\n");
-            break;
-        case EFI_WARN_WRITE_FAILURE:
-            Print(L"EFI_WARN_WRITE_FAILURE\n");
-            break;
-        default:
-            break;
+    // Sanity check
+    if (type > sizeof(mem_types) / sizeof(CHAR16 *)) {
+        return L"Out of bounds type";
     }
+
+    return mem_types[type];
+}
+
+// Print out memory map information, given a mem_map struct
+void print_memory_map(mem_map_t *mem_map)
+{
+    EFI_MEMORY_DESCRIPTOR *cur;
+    void *end;
+
+    Print(L"Memory map info\n");
+    Print(L"Number of Entries: %d\n", mem_map->num_entries);
+    Print(L"Map key: %d\n", mem_map->map_key);
+    Print(L"Descriptor Size: %d\n", mem_map->desc_size);
+    Print(L"Descriptor Version: %d\n", mem_map->desc_version);
+    Print(L"\n");
+
+    cur = mem_map->memory_map;
+    for (int i = 0; i < mem_map->num_entries; i++) {
+        // Get size of this entry in bytes
+        UINTN entry_size = cur->NumberOfPages * 4096;
+
+        // Something is wrong, type doesn't print properly if I try to read it from the array
+        Print(L"Type: %d Size: %d\n", cur->Type, entry_size);
+        Print(L"Attribute: 0x%x\n", cur->Attribute);
+        Print(L"Physical: %016llx-%016llx\n", cur->PhysicalStart, cur->PhysicalStart + entry_size);
+        Print(L" Virtual: %016llx-%016llx\n", cur->VirtualStart, cur->VirtualStart + entry_size);
+        Print(L"\n");
+
+        cur = (void  *) cur + mem_map->desc_size;
+    }
+
+    CHAR16 *test = mem_types[1];
+    Print(L"Test: %s\n", test);
 
     return;
 }

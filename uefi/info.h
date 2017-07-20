@@ -13,7 +13,7 @@ typedef struct mem_map {
     UINT32                  desc_version;
     UINTN                   desc_size;
     UINTN                   map_key;
-    UINTN                   num_entries;
+    UINTN                   num_entries; // This is a gnu-efi LibMemoryMap thing, UEFI function returns size in bytes, gnu-efi divides that by desc_size to get number of entries
 } mem_map_t;
 
 typedef struct gfx_info {
@@ -25,22 +25,5 @@ typedef struct gfx_info {
     EFI_PHYSICAL_ADDRESS                    fb_base;
     UINTN                                   fb_size;
 } gfx_info_t;
-
-static const CHAR16 *mem_types[] = {
-    L"EfiReservedMemoryType",
-    L"EfiLoaderCode",
-    L"EfiLoaderData",
-    L"EfiBootServicesCode",
-    L"EfiBootServicesData",
-    L"EfiRuntimeServicesCode",
-    L"EfiRuntimeServicesData",
-    L"EfiConventionalMemory",
-    L"EfiUnusableMemory",
-    L"EfiACPIReclaimMemory",
-    L"EfiACPIMemoryNVS",
-    L"EfiMemoryMappedIO",
-    L"EfiMemoryMappedIOPortSpace",
-    L"EfiPalCode",
-};
 
 #endif
