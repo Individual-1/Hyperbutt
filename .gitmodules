@@ -1,0 +1,3 @@
+[submodule "uefi_edk2"]
+	path = uefi_edk2
+	url = https://github.com/d2h5/Uefibutt
