@@ -23,10 +23,11 @@ Pros
 
 Cons
 * Doesn't seem quite as extensive as EDK2 in terms of functionality provided
+* You need to do some hackery with copying sections around and tacking a PE header on the final executable to get it to work with UEFI
 
 ## Transitioning to EDK2
 
-After using gnu-efi for a while, I decided to move the UEFI app over to EDK2 because I hate myself. While my code didn't have to change too much (swapping out headers, adding a ton more headers, swapping out wrappers), the work required to integrate my codebase into EDK2 (you integrate into them, not the other way around) was fairly substantial. The setup involves putting together various configuration files which describe different parts of the application and compile process. The EDK2 wiki describes it in great detail (https://github.com/tianocore/tianocore.github.io/wiki/EDK-II-Specifications) so I won't, but putting together configs for my tiny project took about 4 hours of frankensteining example together and fixing problems as they arose during compile. At the end of all of it, I feel I can somewhat understand how everything fits together and slightly appreciate what it all offers. Doesn't change that it is incredibly over-engineered though.
+After using gnu-efi for a while, I decided to move the UEFI app over to EDK2 because I hate myself. While my code didn't have to change too much (swapping out headers, adding a ton more headers, swapping out wrappers), the work required to integrate my codebase into EDK2 (you integrate into them, not the other way around) was fairly substantial. The setup involves putting together various configuration files which describe different parts of the application and compile process. The EDK2 wiki describes it in great detail (https://github.com/tianocore/tianocore.github.io/wiki/EDK-II-Specifications) so I won't, but putting together configs for my tiny project took about 4 hours of frankensteining examples together and fixing problems as they arose during compile. At the end of all of it, I feel I can somewhat understand how everything fits together and slightly appreciate what it all offers. Doesn't change that it is incredibly over-engineered though.
 
 Pros
 * Vast amounts of functionality available via various wrappers and APIs
