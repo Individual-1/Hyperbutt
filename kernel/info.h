@@ -8,6 +8,23 @@
 #include <stddef.h>
 #include <stdint.h>
 
+const CHAR16 *mem_types[] = {
+    L"EfiReservedMemoryType",
+    L"EfiLoaderCode",
+    L"EfiLoaderData",
+    L"EfiBootServicesCode",
+    L"EfiBootServicesData",
+    L"EfiRuntimeServicesCode",
+    L"EfiRuntimeServicesData",
+    L"EfiConventionalMemory",
+    L"EfiUnusableMemory",
+    L"EfiACPIReclaimMemory",
+    L"EfiACPIMemoryNVS",
+    L"EfiMemoryMappedIO",
+    L"EfiMemoryMappedIOPortSpace",
+    L"EfiPalCode"
+};
+
 // Taken from GraphicsOutput.h
 typedef struct {
     uint32_t    RedMask;
@@ -29,10 +46,10 @@ typedef uint64_t EFI_PHYSICAL_ADDRESS;
 
 typedef struct mem_map {
     void   *memory_map; // EFI_MEMORY_DESCRIPTOR normally
-    uint32_t_t                  desc_version; // 
+    uint32_t                   desc_version;
     uint64_t                   desc_size;
     uint64_t                   map_key;
-    uint64_t                   num_entries; // This is a gnu-efi LibMemoryMap thing, UEFI function returns size in bytes, gnu-efi divides that by desc_size to get number of entries
+    uint64_t                   num_entries;
 } mem_map_t;
 
 typedef struct gfx_info {
