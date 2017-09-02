@@ -39,3 +39,17 @@ Cons
 * Why do I need to modify 3 configuration files to add one header file
     * One place to reference that you'll be using the library, one place to take that name and map it to a module, and one more to indicate where that module is
 * A lot of flexibility also means a lot of room for error
+
+## EDK2 Notes
+
+### Adding libraries from EDK2
+
+This took me a while to figure out because I never really looked at the EDK libraries available until I started running into issues doing things myself. As far as I can tell, adding a library for use involves ~4 steps.
+
+1. Add the desired parent package to the [Packages] section of your .inf file (such as MdePkg/MdePkg.dec to get access to FileHandleLib)
+
+2. Add the desired Library class to the [LibraryClasses] section of your .inf file (ex: FileHandleLib)
+
+3. Add a provider for your LibraryClass in your .dsc file under the [LibraryClasses] (ex: FileHandleLib|MdePkg/Library/UefiFileHandleLib/UefiFileHandleLib.inf)
+
+4. Add the header for the library where you want to use it (ex: #include <Library/FileHandleLib.h>)
