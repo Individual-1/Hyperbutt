@@ -1,7 +1,8 @@
 ## Environment
 My current env:
 * Arch Linux
-* CC=clang
-* gnu-efi installed to default directories (/usr/local/lib)
+* EDK2 for UEFI development
 * mtools, dosfstools installed from package manager
 * OVMF (virtual efi image for qemu) from tianocore
+
+* See dog_with_a_blog directory for slightly more detailed notes
