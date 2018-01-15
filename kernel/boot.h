@@ -7,4 +7,6 @@
 
 void setup_kernel(mem_map_t *mem_map, gfx_info_t *gfx_info);
 
+void kmain(mem_map_t *mem_map, gfx_info_t *gfx_info);
+
 #endif

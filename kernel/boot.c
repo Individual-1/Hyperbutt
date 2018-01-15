@@ -23,3 +23,8 @@ void setup_kernel(mem_map_t *mem_map, gfx_info_t *gfx_info)
 {
     // idk do something I guess
 }
+
+void kmain(mem_map_t *mem_map, gfx_info_t *gfx_info)
+{
+    
+}
